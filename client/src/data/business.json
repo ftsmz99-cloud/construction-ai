@@ -1,0 +1,36 @@
+{
+  "businessName": "Thunderbolt Construction",
+  "industry": "Construction Services",
+
+  "services": [
+    "Residential house construction",
+    "Building renovations",
+    "Home extensions",
+    "Commercial construction",
+    "Project planning and management",
+    "General building services"
+  ],
+
+  "hours": {
+    "mondayFriday": "08:00 - 17:00",
+    "saturday": "08:00 - 13:00",
+    "sunday": "Closed"
+  },
+
+  "location": "Windhoek, Namibia",
+
+  "faq": [
+    {
+      "question": "Do you provide quotes?",
+      "answer": "Yes, we provide project estimates after understanding the customer's requirements."
+    },
+    {
+      "question": "What projects do you handle?",
+      "answer": "We handle residential construction, renovations, extensions, and general building projects."
+    },
+    {
+      "question": "Do you work weekends?",
+      "answer": "We are available Saturday mornings. Sundays are closed."
+    }
+  ]
+}

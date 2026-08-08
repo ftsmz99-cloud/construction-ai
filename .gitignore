@@ -1,0 +1,25 @@
+# Node
+node_modules/
+*/node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Admin credential store (salted password hashes) - never commit
+server/data/admins.json
+data/admins.json
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+
+# Runtime backups / temp
+*.backup
+*.tmp
