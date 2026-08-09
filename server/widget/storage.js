@@ -19,9 +19,17 @@ export function loadMessages(){
     );
 
 
-    return saved
-        ? JSON.parse(saved)
-        : [];
+    if (!saved) return [];
+
+    try {
+        const parsed = JSON.parse(saved);
+
+        return Array.isArray(parsed)
+            ? parsed
+            : [];
+    } catch (error) {
+        return [];
+    }
 
 }
 

@@ -45,7 +45,6 @@ let conversationId =
 function save(){
 
     saveMessages(
-        CLIENT_ID,
         messages
     );
 
