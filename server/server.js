@@ -8,25 +8,98 @@ import chatRoute from "./routes/chat.js";
 import authRoute from "./routes/auth.js";
 import loadBusiness, { invalidateBusiness } from "./utils/loadBusiness.js";
 import { requireAdmin, requireTenant, sanitizeClientId } from "./utils/auth.js";
+import createRateLimiter from "./utils/rateLimit.js";
 
 dotenv.config();
 
 const app = express();
 
-// Allow only the admin dashboard origin. The customer widget is same-origin
-// (served by this server), so it needs no CORS. Admin requests carry an
-// Authorization header, which must be allowed.
+// Allow only the admin dashboard origin for the admin/default zone.
+// The customer widget is embedded cross-origin on customer domains, so ONLY
+// the public widget resources below get a separate public CORS configuration
+// that reflects the requesting origin.
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
-app.use(
-  cors({
-    origin: CLIENT_ORIGIN,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-  })
-);
+
+const restrictCors = cors({
+  origin: CLIENT_ORIGIN,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+});
+
+// Public CORS for the customer-facing widget. Reflects whatever origin the
+// widget is embedded on so a customer site can call it cross-origin. The
+// public API is anonymous, so credentials are intentionally NOT enabled.
+const publicCors = cors({ origin: true });
+
+// Detect public widget requests so the restrictive CORS does not terminate
+// their CORS preflights before publicCors runs at the public route mounts.
+function isPublicWidgetRequest(req) {
+  const method = String(req.method || "").toUpperCase();
+  // For CORS preflights the browser announces the intended method in
+  // Access-Control-Request-Method; /business uses that so it stays
+  // method-aware: GET is public, PUT stays admin.
+  const effectiveMethod =
+    method === "OPTIONS"
+      ? String(req.headers["access-control-request-method"] || "").toUpperCase()
+      : method;
+
+  const { path } = req;
+
+  if (path === "/chat" || path.startsWith("/chat/")) return true;
+  if (path === "/widget" || path.startsWith("/widget/")) return true;
+  if (effectiveMethod === "GET" && path === "/business") return true;
+
+  return false;
+}
+
+// Restrictive CORS for every route except the public widget resources above.
+// Public widget requests get publicCors right here (single enforcement point)
+// so CORS preflights to public resources are also answered with the
+// reflecting origin; otherwise the restrictive CORS would terminate the
+// preflight before any public route middleware could run.
+app.use((req, res, next) => {
+  if (isPublicWidgetRequest(req)) {
+    return publicCors(req, res, next);
+  }
+  return restrictCors(req, res, next);
+});
 app.use(express.json());
 
-// Auth: login/logout
+// ===================================
+// ABUSE / COST PROTECTION
+// ===================================
+// Per-IP in-memory rate limits (no database / Redis). The public widget chat
+// endpoint costs Groq credits, so it is capped; login is capped to slow
+// brute-force attempts. CORS preflights are answered by the CORS guard above
+// before they reach these routes, so OPTIONS requests never consume quota.
+const WIDGET_CHAT_LIMIT = createRateLimiter({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 30,                  // 30 chat messages per IP per 10 minutes
+  name: "chat"
+});
+
+const LOGIN_LIMIT = createRateLimiter({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 10,                  // 10 login attempts per IP per 10 minutes
+  name: "login"
+});
+
+// Login attempts only; logout stays unlimited.
+app.use("/auth/login", LOGIN_LIMIT);
+
+// Signup is a public, anonymous provisioning endpoint used to create tenants,
+// so it is capped to slow abuse / mass account creation.
+const SIGNUP_LIMIT = createRateLimiter({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 5,                   // 5 signup attempts per IP per 10 minutes
+  name: "signup"
+});
+
+// Signup attempts only. This route stays under the RESTRICTIVE (CLIENT_ORIGIN)
+// CORS policy; it must never join the public reflect-any-origin policy.
+app.use("/auth/signup", SIGNUP_LIMIT);
+
+// Auth: login/logout/signup
 app.use("/auth", authRoute);
 
 const DATA_FOLDER = path.join(process.cwd(), "data");
@@ -61,7 +134,7 @@ function readJson(clientId, fileName, fallback = []) {
 // CHAT
 // ===================================
 
-app.use("/chat", chatRoute);
+app.use("/chat", WIDGET_CHAT_LIMIT, chatRoute);
 
 // ===================================
 // WIDGET CONFIG (NEW MAIN ENDPOINT)

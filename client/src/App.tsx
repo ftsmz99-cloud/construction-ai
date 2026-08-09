@@ -8,6 +8,7 @@ import TopBar from "./components/TopBar";
 import RequireAuth from "./components/RequireAuth";
 
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Conversations from "./pages/Conversations";
 import Leads from "./pages/Leads";
@@ -63,6 +64,8 @@ function App() {
           <Routes>
 
             <Route path="/login" element={<Login />} />
+
+            <Route path="/signup" element={<Signup />} />
 
             <Route
               path="/*"

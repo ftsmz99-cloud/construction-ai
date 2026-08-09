@@ -1,0 +1,3 @@
+# Test-runner scratch sandboxes (spawned servers + scratch runtime data).
+# Never commit sandbox contents.
+.scratch/

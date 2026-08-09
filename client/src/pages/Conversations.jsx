@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 import ChatWindow from "../components/ChatWindow";
 import ChatInput from "../components/ChatInput";
 import API_BASE from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function Conversations() {
 
-  const clientId = "thunderbolt";
+  const { clientId } = useAuth();
 
 
   const [conversationId, setConversationId] = useState("");
@@ -22,7 +23,7 @@ export default function Conversations() {
 
   useEffect(() => {
 
-    fetch(`${API_BASE}/business`)
+    fetch(`${API_BASE}/business?clientId=${clientId}`)
 
       .then(res => res.json())
 

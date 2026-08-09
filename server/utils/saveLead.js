@@ -171,12 +171,48 @@ try{
 
     );
 
+    const leadName =
+    String(lead.name || "")
+    .trim();
+
+    // Junk-lead guard: a record without a name or phone cannot be followed
+    // up, so it is not a lead at all. Extraction runs on every chat message
+    // and can return a fully blank (or only-project) object early in a
+    // conversation; skip those without writing a record.
+    if(!leadName && !phone){
+        return false;
+    }
+
+    const conversationId =
+    lead.conversationId || null;
 
 
 
 
+
+
+    // One conversation must never produce more than one lead, even when
+    // extraction returns slightly different fields across messages. Prefer
+    // matching on conversation id first; fall back to phone/name matches.
+    const matchingConversation =
+
+    conversationId ?
+
+    leads.findIndex(item=>
+
+        item.conversationId &&
+
+        String(item.conversationId)===String(conversationId)
+
+    ) :
+
+    -1;
 
     const existingIndex =
+
+    matchingConversation !== -1 ?
+
+    matchingConversation :
 
     leads.findIndex(item=>{
 
@@ -226,22 +262,31 @@ try{
     if(existingIndex !== -1){
 
 
-        leads[existingIndex]={
-
-
-            ...leads[existingIndex],
-
-
-            ...lead,
-
-
-            clientId,
-
-
-            updatedAt:now
-
-
+        // Merge: keep stored fields unless the new extraction provides a
+        // non-empty replacement, so incremental extractions never wipe out
+        // info that was already collected. Refresh the lead score too.
+        const merged = {
+            ...leads[existingIndex]
         };
+
+        for(const key of Object.keys(lead)){
+            const value = lead[key];
+
+            const nonEmpty =
+            typeof value === "string" ?
+            value.trim() !== "" :
+            value !== undefined && value !== null;
+
+            if(nonEmpty){
+                merged[key] = value;
+            }
+        }
+
+        merged.clientId = clientId;
+        merged.updatedAt = now;
+        merged.score = calculateScore(merged);
+
+        leads[existingIndex] = merged;
 
 
     }

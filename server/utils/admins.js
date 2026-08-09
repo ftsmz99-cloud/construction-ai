@@ -11,26 +11,33 @@ import { sanitizeClientId } from "./auth.js";
 // Keeps plaintext passwords out of version control.
 // Future SaaS scaling: replace with a real users table / identity provider.
 
-const ADMINS_FILE = path.join(process.cwd(), "data", "admins.json");
+// The admins file lives next to the runtime data, resolved from the process
+// working directory at call time like every other storage module. This keeps
+// the helpers safe to use from any cwd (e.g. the isolated test sandboxes).
+function adminsFile() {
+  return path.join(process.cwd(), "data", "admins.json");
+}
 
 function loadAdmins() {
-  if (!fs.existsSync(ADMINS_FILE)) {
+  const file = adminsFile();
+  if (!fs.existsSync(file)) {
     return {};
   }
   try {
-    return JSON.parse(fs.readFileSync(ADMINS_FILE, "utf8"));
+    return JSON.parse(fs.readFileSync(file, "utf8"));
   } catch {
     return {};
   }
 }
 
 function writeAdmins(admins) {
-  const directory = path.dirname(ADMINS_FILE);
+  const file = adminsFile();
+  const directory = path.dirname(file);
   if (!fs.existsSync(directory)) {
     fs.mkdirSync(directory, { recursive: true });
   }
   fs.writeFileSync(
-    ADMINS_FILE,
+    file,
     JSON.stringify(admins, null, 2),
     "utf8"
   );
@@ -72,6 +79,27 @@ export function upsertAdmin(clientId, password) {
   const admins = loadAdmins();
   const salt = crypto.randomBytes(16).toString("hex");
 
+  admins[id] = {
+    salt,
+    passwordHash: hashPassword(password, salt),
+    updatedAt: new Date().toISOString()
+  };
+
+  writeAdmins(admins);
+  return id;
+}
+
+// Create the admin credential for a tenant that does NOT have one yet.
+// Returns null (without writing anything) if the tenant already has an admin,
+// so it can never overwrite or rotate an existing tenant's credential.
+export function createAdmin(clientId, password) {
+  const id = sanitizeClientId(clientId);
+  const admins = loadAdmins();
+  if (admins[id]) {
+    return null;
+  }
+
+  const salt = crypto.randomBytes(16).toString("hex");
   admins[id] = {
     salt,
     passwordHash: hashPassword(password, salt),

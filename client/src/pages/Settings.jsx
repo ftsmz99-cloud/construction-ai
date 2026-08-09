@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../services/api";
+import API_BASE from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 
@@ -26,6 +27,8 @@ export default function Settings(){
   const [serviceInput,setServiceInput] = useState("");
 
   const [saved,setSaved] = useState(false);
+
+  const [copied,setCopied] = useState(false);
 
 
 
@@ -115,6 +118,27 @@ export default function Settings(){
 
 
 
+
+  const embedSnippet =
+    `<script src="${API_BASE}/widget/embed.js" data-client="${clientId}"></script>`;
+
+  function copyEmbed(){
+    navigator.clipboard.writeText(embedSnippet)
+      .then(()=>{
+
+        setCopied(true);
+
+        setTimeout(()=>setCopied(false),2000);
+
+      })
+      .catch(()=>{
+
+        alert(
+          "Could not copy automatically. Please select and copy the code manually."
+        );
+
+      });
+  }
 
   async function saveBusiness(){
 
@@ -613,6 +637,59 @@ export default function Settings(){
 
 
 
+
+      </div>
+      <div className="bg-white rounded-xl shadow p-6 mt-8 space-y-4">
+
+        <div>
+
+          <h2 className="text-xl font-semibold">
+
+            Install on your website
+
+          </h2>
+
+          <p className="text-slate-500 mt-1">
+
+            Paste this snippet into your website just before the closing{" "}
+
+            <code className="text-slate-700">&lt;/body&gt;</code> tag to add
+
+            your AI receptionist. It loads the business information saved on
+
+            this page automatically.
+
+          </p>
+
+        </div>
+
+        <pre className="bg-slate-900 text-green-300 text-sm p-4 rounded-xl overflow-x-auto">
+
+          {embedSnippet}
+
+        </pre>
+
+        <button
+
+          onClick={copyEmbed}
+
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg"
+
+        >
+
+          {copied ? "Copied!" : "Copy embed code"}
+
+        </button>
+
+        {copied && (
+
+          <p className="text-green-600 font-medium">
+
+            Embed code copied. Paste it into your website to go live.
+
+          </p>
+
+        )}
 
       </div>
 

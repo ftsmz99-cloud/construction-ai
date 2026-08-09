@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { apiFetch } from "../services/api";
 
-export default function Login() {
-  const { login } = useAuth();
+export default function Signup() {
   const navigate = useNavigate();
 
+  const [businessName, setBusinessName] = useState("");
   const [clientId, setClientId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -14,18 +14,34 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!clientId.trim() || !password) {
-      setError("Business ID and password are required");
+    if (!businessName.trim() || !clientId.trim() || !password) {
+      setError("Business name, Business ID and password are required");
       return;
     }
 
     setError("");
     setLoading(true);
     try {
-      await login(clientId.trim(), password);
-      navigate("/", { replace: true });
+      const res = await apiFetch("/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessName: businessName.trim(),
+          clientId: clientId.trim(),
+          password
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Signup failed. Please try again.");
+      }
+
+      // Account created. Route back to the existing sign-in flow.
+      navigate("/login", { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "Signup failed");
     } finally {
       setLoading(false);
     }
@@ -42,7 +58,7 @@ export default function Login() {
             AI Receptionist
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Sign in to your business dashboard
+            Create your business account
           </p>
         </div>
 
@@ -52,16 +68,35 @@ export default function Login() {
 
         <div>
           <label className="font-semibold text-sm">
+            Business Name
+          </label>
+          <input
+            className="w-full border rounded-lg p-3 mt-2"
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            placeholder="e.g. Rowens Mechanics"
+            autoComplete="organization"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="font-semibold text-sm">
             Business ID
           </label>
           <input
             className="w-full border rounded-lg p-3 mt-2"
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
-            placeholder="e.g. thunderbolt"
+            placeholder="e.g. acme-builders"
             autoComplete="username"
             required
           />
+          <p className="text-slate-500 text-xs mt-1">
+            A short address used to load your AI receptionist on your website.
+            Use letters, numbers, dashes and underscores only (no spaces).
+            Your embed code will use it automatically.
+          </p>
         </div>
 
         <div>
@@ -73,7 +108,8 @@ export default function Login() {
             className="w-full border rounded-lg p-3 mt-2"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
+            placeholder="At least 8 characters"
+            autoComplete="new-password"
             required
           />
         </div>
@@ -83,16 +119,16 @@ export default function Login() {
           disabled={loading}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50"
         >
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? "Creating account..." : "Create account"}
         </button>
 
         <p className="text-sm text-slate-500 text-center">
-          Don&apos;t have an account?{" "}
+          Already have an account?{" "}
           <Link
-            to="/signup"
+            to="/login"
             className="text-blue-600 font-medium hover:underline"
           >
-            Create one
+            Sign in
           </Link>
         </p>
       </form>
