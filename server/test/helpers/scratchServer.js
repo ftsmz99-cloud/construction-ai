@@ -59,8 +59,9 @@ function tenantBBusiness() {
 /**
  * Builds a scratch sandbox and returns its paths. The sandbox is a full
  * mini-server: instance/ holds the spawned process's cwd (its .env, data/),
- * and ../widget holds a copy of the real widget folder so /widget assets can
- * be tested via the server's existing "../widget" resolution.
+ * and widget/ inside the server instance holds a copy of the real widget
+ * folder so /widget assets resolve via the server's cwd-relative "widget"
+ * path.
  */
 export function buildScratchInstance(options = {}) {
   const id = crypto.randomUUID();
@@ -71,9 +72,9 @@ export function buildScratchInstance(options = {}) {
 
   fs.rmSync(scratchBase, { recursive: true, force: true });
 
-  const widgetDir = path.resolve(SERVER_DIR, "..", "widget");
+  const widgetDir = path.resolve(SERVER_DIR, "widget");
   if (fs.existsSync(widgetDir)) {
-    fs.cpSync(widgetDir, path.join(scratchBase, "widget"), { recursive: true });
+    fs.cpSync(widgetDir, path.join(instanceDir, "widget"), { recursive: true });
   }
 
   fs.mkdirSync(instanceDir, { recursive: true });

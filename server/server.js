@@ -109,7 +109,7 @@ const DATA_FOLDER = path.join(process.cwd(), "data");
 // ===================================
 // Serve the customer-facing widget bundle so the embed script and its
 // CSS/JS can be loaded by any site. Kept separate from API routes.
-const WIDGET_FOLDER = path.join(process.cwd(), "..", "widget");
+const WIDGET_FOLDER = path.join(process.cwd(), "widget");
 
 if (fs.existsSync(WIDGET_FOLDER)) {
   app.use("/widget", express.static(WIDGET_FOLDER));
